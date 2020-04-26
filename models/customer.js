@@ -53,6 +53,37 @@ class Customer {
     return new Customer(customer);
   }
 
+  static async filterByName(name) {
+    const results = await db.query(
+      `SELECT id, 
+         first_name AS "firstName",  
+         last_name AS "lastName", 
+         phone, 
+         notes
+       FROM customers
+       WHERE first_name ILIKE '%${name}%' or last_name ILIKE '%${name}%'
+       ORDER BY last_name, first_name`
+    );
+    return results.rows.map((c) => new Customer(c));
+  }
+
+  static async topTenCustomerByRes() {
+    const results = await db.query(
+      `SELECT id, 
+         first_name AS "firstName",  
+         last_name AS "lastName",
+         phone,
+         notes FROM 
+         (
+         SELECT customers.id as id, first_name, last_name, phone, customers.notes, count(first_name) as num_res
+         FROM customers LEFT JOIN reservations on reservations.customer_id = customers.id 
+         GROUP BY customers.id, first_name, last_name, phone, customers.notes
+         ORDER BY num_res DESC) a
+         LIMIT 10`
+    );
+    console.log(results);
+    return results.rows.map((c) => new Customer(c));
+  }
   /** get all reservations for this customer. */
 
   async getReservations() {
@@ -79,10 +110,14 @@ class Customer {
     }
   }
 
-  fullName() {
+  get fullName() {
     const fullName = this.firstName + " " + this.lastName;
     return fullName;
   }
+  // fullName() {
+  //   const fullName = this.firstName + " " + this.lastName;
+  //   return fullName;
+  // }
 }
 
 module.exports = Customer;
